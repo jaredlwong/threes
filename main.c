@@ -14,6 +14,10 @@ main(void)
 	char c;
 	dir_t dir;
 
+	printf("%d\n", NORTH);
+	printf("%d\n", EAST);
+	printf("%d\n", WEST);
+	printf("%d\n", SOUTH);
 	print_board(board);
 
 	int64_t last_score = 0;
@@ -27,7 +31,9 @@ main(void)
 	
 		player_make_move(board, next_move);
 		if (old_board.b == board->b) {
-			printf("---------\n");
+			printf("--------- old board -------\n");
+			print_board(&old_board);
+			printf("--------- last board ------\n");
 			print_board(board);
 			printf("DONE\n");
 			return 0;

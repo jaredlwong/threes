@@ -43,6 +43,13 @@ const uint8_t const value_to_piece[] = {
 	[6144]	= P6144
 };
 
+const char * const dir_to_str[] = {
+	[NORTH]	= "NORTH",
+	[SOUTH]	= "SOUTH",
+	[EAST]	= "EAST",
+	[WEST]	= "WEST"
+};
+
 
 board_t *
 create_board(char *bstr[], uint64_t last_move_dir, uint64_t n_ones,
@@ -365,10 +372,11 @@ board_score(board_t *board)
 int64_t
 eval_board(board_t *board)
 {
-	int64_t num_empty = 0;
-	int64_t num_pairs = 0;
-	int64_t num_bad_pairs = 0;
-	int64_t num_double_pairs = 0;
+	int64_t num_empty = 0;		// 0
+	int64_t num_pairs = 0;		// 3, 3
+	int64_t num_bad_pairs = 0;	// 1, 1 || 2, 2
+	int64_t num_double_pairs = 0;	// x, 2*x
+	int64_t num_bad_position = 0;
 
 	for (int y = 0; y < 4; y++) {
 		for (int x = 0; x < 4; x++) {
@@ -382,6 +390,7 @@ eval_board(board_t *board)
 			if (cur == 0) {
 				num_empty += 1;
 			} else {
+				int64_t num_more = 0;
 				for (int i = 0; i < 4; i++) {
 					if (cur <= P2) {
 						if (neighbors[i] + cur == 3) {
@@ -395,7 +404,13 @@ eval_board(board_t *board)
 						} else if (neighbors[i] == cur + 1) {
 							num_double_pairs += 1;
 						}
+						if (neighbors[i] > cur) {
+							num_more += 1;
+						}
 					}
+				}
+				if (num_more >= 2 || (num_more >= 1 && (x == 0 || x == 3 || y == 0 || y == 3))) {
+					num_bad_position += 1;
 				}
 			}
 		}
@@ -405,8 +420,9 @@ eval_board(board_t *board)
 		return -1000;
 	}
 	
-	return num_empty * 2 + num_pairs * 2 - num_bad_pairs + num_double_pairs;
+	return num_empty * 2 + num_pairs * 2 + num_double_pairs - num_bad_position;
 }
+
 
 int64_t
 alpha_beta_helper(board_t *board, int depth, int64_t alpha, int64_t beta, int is_player)
@@ -441,12 +457,14 @@ alpha_beta_helper(board_t *board, int depth, int64_t alpha, int64_t beta, int is
 	} else {
 		uint64_t possible_pieces = comp_possible_pieces(board);
 		uint64_t possible_places = comp_possible_places(board);
+		int is_valid = 0;
 		for (piece_t i = P1; i <= P768; i++) {
 			if ((possible_pieces & (1ULL << i)) == 0)
 				continue;
 			for (int j = 0; j < 16; j++) {
 				if ((possible_places & (1ULL << j)) == 0)
 					continue;
+				is_valid = 1;
 				board_t new_board = *board;
 				comp_make_move(&new_board, j, i);
 				int64_t score = -1 * alpha_beta_helper(&new_board, depth-1, -1 * beta, -1 * alpha, 1);
@@ -456,6 +474,10 @@ alpha_beta_helper(board_t *board, int depth, int64_t alpha, int64_t beta, int is
 					return alpha;
 			}
 		}
+		if (!is_valid) {
+			printf("ERRROR NOT VALID\n");
+			exit(1);
+		}
 	}
 	return alpha;
 }
@@ -463,6 +485,7 @@ alpha_beta_helper(board_t *board, int depth, int64_t alpha, int64_t beta, int is
 dir_t
 alpha_beta_next_move(board_t *board, int depth)
 {
+	int have_move = 0;
 	int64_t best_score = -1000;
 	dir_t best_move = -1;
 	dir_t move;
@@ -472,11 +495,17 @@ alpha_beta_next_move(board_t *board, int depth)
 		// illegal move
 		if (new_board.b == board->b) continue;
 		int64_t score = -1 * alpha_beta_helper(&new_board, depth-1, -1000, 1000, 0);
-		if (score > best_score) {
+		if (have_move == 0 || score > best_score) {
 			best_score = score;
 			best_move = move;
+			have_move = 1;
 		}
 	}
-	printf("%lld\n", best_score);
+	if (best_move == -1) {
+		printf("FUCK FUCK\n");
+		print_board(board);
+	} else {
+		printf("move: %s\tscore: %lld\thave move: %d\n", dir_to_str[best_move], best_score, have_move);
+	}
 	return best_move;
 }

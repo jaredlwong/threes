@@ -126,6 +126,24 @@ test_player_make_move(void)
 		}
 	}
 	free(board);
+
+	char *bstr2[] = {
+		"1", "6", "192", "2",
+		"1", "6", "48", "12",
+		"1", "12", "96", "0",
+		"3", "3", "2", "3"
+	};
+	char *bstr2_expected[] = {
+		"1", "12", "192", "2",
+		"1", "12", "48", "12",
+		"1", "3", "96", "0",
+		"3", "0", "2", "3"
+	};
+	board = create_board(bstr, NORTH, 4, 4, 4);
+	eboard = create_board(bstr_expected, NORTH, 4, 4, 4);
+	dir_t best_move = alpha_beta_next_move(board, 10);
+	printf("%d\n", best_move);
+	free(board);
 }
 
 void
